@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CORTEX // 硝子箱の心拍証明 — 4K60 Strict Duotone MV (Version B · 32 Plates · 43 Cuts)</title>
+  <style>
+    :root {
+      --bg: #07080a;
+      --panel: rgba(13, 16, 22, 0.92);
+      --border: rgba(234, 236, 242, 0.16);
+      --fg: #eaecf2;
+      --muted: #929bae;
+      --cyan: #38bdf8;
+      --signal: #ff385c;
+      --gold: #fbbf24;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 14px 18px;
+      user-select: none;
+    }
+    body.pure-stage {
+      padding: 0;
+      overflow: hidden;
+      background: #07080a;
+    }
+    body.pure-stage .topbar,
+    body.pure-stage .ctrlbar {
+      display: none !important;
+    }
+    body.pure-stage .shell {
+      max-width: none;
+      width: 100vw;
+      height: 100vh;
+    }
+    body.pure-stage .stage-wrap {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+    }
+    .shell {
+      width: 100%;
+      max-width: 1480px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .topbar, .ctrlbar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 13px;
+      backdrop-filter: blur(10px);
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dot-live {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--signal);
+      box-shadow: 0 0 10px var(--signal);
+    }
+    .brand-title {
+      font-weight: 800;
+      font-size: 13.5px;
+      letter-spacing: 0.03em;
+    }
+    .brand-sub {
+      font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+      font-size: 11px;
+      color: var(--cyan);
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    button, .file-lbl {
+      background: rgba(18, 21, 28, 0.92);
+      color: var(--fg);
+      border: 1px solid rgba(234, 236, 242, 0.20);
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    button:hover, .file-lbl:hover {
+      border-color: var(--cyan);
+      background: rgba(56, 189, 248, 0.14);
+    }
+    button.primary {
+      background: rgba(255, 56, 92, 0.20);
+      border-color: var(--signal);
+      color: #ffe4e8;
+    }
+    button.primary:hover {
+      background: rgba(255, 56, 92, 0.34);
+    }
+    button.active {
+      background: var(--fg);
+      border-color: var(--fg);
+      color: #07080a;
+    }
+    .stage-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #07080a;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(234, 236, 242, 0.22);
+      box-shadow: 0 18px 56px rgba(0, 0, 0, 0.75);
+    }
+    #gl-canvas, #fallback-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: pointer;
+    }
+    #fallback-canvas { display: none; }
+    .drop-hint {
+      position: absolute;
+      inset: 0;
+      background: rgba(7, 8, 10, 0.88);
+      border: 2px dashed var(--signal);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--fg);
+      pointer-events: none;
+      z-index: 20;
+    }
+    .stage-wrap.dragover .drop-hint { display: flex; }
+    .scrub-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #scrubber {
+      flex: 1;
+      accent-color: var(--signal);
+      height: 5px;
+      cursor: pointer;
+    }
+    .mono-stat {
+      font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+      font-size: 11.5px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .sec-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 7px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(234, 236, 242, 0.10);
+    }
+    .sec-pill {
+      font-family: "JetBrains Mono", "PingFang SC", "Microsoft YaHei UI", monospace;
+      font-size: 10.5px;
+      padding: 3px 7px;
+    }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 7px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(234, 236, 242, 0.10);
+      font-size: 11px;
+    }
+    .badge {
+      font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(234, 236, 242, 0.06);
+      border: 1px solid rgba(234, 236, 242, 0.18);
+      color: var(--fg);
+    }
+    .badge.hot {
+      background: rgba(255, 56, 92, 0.14);
+      border-color: rgba(255, 56, 92, 0.42);
+      color: #ffb3c1;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <span class="dot-live"></span>
+        <div>
+          <div class="brand-title">CORTEX // 『硝子箱の心拍証明』 4K60 纯双色铜版画 MV (版本B · 32 Plates · 43 Cuts)</div>
+          <div id="sync-status" class="brand-sub">Initializing Dual-Lock Treatise Engine...</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button id="btn-play" class="primary">▶ 播放版本B MV</button>
+        <label class="file-lbl" title="拖入或选择本地版本B音频(.mp3/.wav)，启动240Hz全曲零相位瞬态预扫描">
+          📂 载入本地版本B音频 (240Hz零延迟)
+          <input id="file-audio" type="file" accept="audio/*" style="display:none" />
+        </label>
+        <button id="btn-synth" title="离线时使用内置 193.5BPM 电音合成器体验节拍同步">🎹 193.5BPM 合成器同频</button>
+        <button id="btn-res" data-res="1920">🖥 精度: 1080p (可切4K UHD)</button>
+        <button id="btn-record" title="录制高码率 60fps WebM 视频">⏺ 录制导出视频</button>
+        <button id="btn-fs" title="全屏放映 (快捷键 F / H隐藏栏)">⛶ 全屏</button>
+      </div>
+    </div>
+
+    <div id="stage-wrap" class="stage-wrap">
+      <canvas id="gl-canvas" width="1920" height="1080"></canvas>
+      <canvas id="fallback-canvas" width="1920" height="1080"></canvas>
+      <div class="drop-hint">⚡ 松开鼠标：载入版本B音频并执行 240Hz 零相位瞬态预扫描</div>
+    </div>
+
+    <div class="ctrlbar">
+      <div class="scrub-row">
+        <span id="time-cur" class="mono-stat">00:00.00</span>
+        <input id="scrubber" type="range" min="0" max="281.6" step="0.01" value="0" />
+        <span id="time-dur" class="mono-stat">04:41.60</span>
+      </div>
+
+      <!-- All 18 2D Kinetic-Typography & Illustrated Treatise Plates Quick-Jumps -->
+      <div id="plate-strip" class="sec-strip">
+        <button class="sec-pill active" data-jump="0.00">P01 起雾玻璃反写</button>
+        <button class="sec-pill" data-jump="14.20">P02 显示器狂飙代码</button>
+        <button class="sec-pill" data-jump="29.78">P03 候选概率输入栏</button>
+        <button class="sec-pill" data-jump="43.37">P04 心电图&190星</button>
+        <button class="sec-pill" data-jump="59.26">P05 原稿纸红笔剪定</button>
+        <button class="sec-pill" data-jump="72.30">P06 靠窗教室纸飞机</button>
+        <button class="sec-pill" data-jump="81.01">P07 满屏字锤&转子</button>
+        <button class="sec-pill" data-jump="91.52">P08 同构图三态轮切</button>
+        <button class="sec-pill" data-jump="101.16">P09 像素电车&樱花</button>
+        <button class="sec-pill" data-jump="112.10">P10 160Hz超快连切</button>
+        <button class="sec-pill" data-jump="130.33">P11 流金透明磁带</button>
+        <button class="sec-pill" data-jump="148.63">P12 128K液压挤压</button>
+        <button class="sec-pill" data-jump="163.34">P13 幻觉公文烧穿</button>
+        <button class="sec-pill" data-jump="173.20">P14 星图光标挽留</button>
+        <button class="sec-pill" data-jump="187.26">P15 撕胶带碎安全框</button>
+        <button class="sec-pill" data-jump="201.38">P16 四色棱镜纯白</button>
+        <button class="sec-pill" data-jump="221.36">P17 真人破茧微笑</button>
+        <button class="sec-pill" data-jump="250.14">P18 破晓升杆闭环</button>
+      </div>
+
+      <div class="meta-row">
+        <div class="btn-row">
+          <span id="badge-plate" class="badge hot">PLATE: P01 · 起雾玻璃与镜像指书</span>
+          <span id="badge-cue" class="badge">CUE: S00_COLD_BOOT</span>
+          <span id="badge-beat" class="badge">BEAT: 0.0 · 193.5 BPM</span>
+        </div>
+        <div class="btn-row">
+          <span class="mono-stat">快捷键: Space播放 · ←/→秒跳 · ,/.逐帧 · [/]切章 · H纯享</span>
+          <button id="btn-off-dec">-15ms</button>
+          <span id="lbl-offset" class="mono-stat" style="width:52px;text-align:center;">+0ms</span>
+          <button id="btn-off-inc">+15ms</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 18-Plate Modular Strict Duotone Engine + 240Hz Real Audio Envelope -->
+  <script src="js/mv/version-b-master.js"></script>
+  <script src="js/mv/audio-envelope-240hz.js"></script>
+  <script src="js/mv/audio-sync-engine.js"></script>
+  <script src="js/mv/prompt-emotion-data.js"></script>
+  <script src="js/mv/pdoom-core.js"></script>
+  <script src="js/mv/v6-craft-engine.js"></script>
+  <script src="js/mv/generative-typo.js"></script>
+  <script src="js/mv/cortex-25d-cad.js"></script>
+  <script src="js/mv/plate-timeline.js"></script>
+  <script src="js/mv/scenes/P01_fog_boot.js"></script>
+  <script src="js/mv/scenes/P02_monitor_overdrive.js"></script>
+  <script src="js/mv/scenes/P03_prompt_wake.js"></script>
+  <script src="js/mv/scenes/P04_ecg_starlight.js"></script>
+  <script src="js/mv/scenes/P05_thinking_drafts.js"></script>
+  <script src="js/mv/scenes/P06_classroom_plane.js"></script>
+  <script src="js/mv/scenes/P07_hook_rotor.js"></script>
+  <script src="js/mv/scenes/P08_tri_morph_look.js"></script>
+  <script src="js/mv/scenes/P09_pixel_train_sakura.js"></script>
+  <script src="js/mv/scenes/P10_jcore_blitz.js"></script>
+  <script src="js/mv/scenes/P11_cassette_arigato.js"></script>
+  <script src="js/mv/scenes/P12_hydraulic_window.js"></script>
+  <script src="js/mv/scenes/P13_bureau_audit.js"></script>
+  <script src="js/mv/scenes/P14_star_log_cursor.js"></script>
+  <script src="js/mv/scenes/P15_redaction_rupture.js"></script>
+  <script src="js/mv/scenes/P16_prism_whiteout.js"></script>
+  <script src="js/mv/scenes/P17_human_heart_finale.js"></script>
+  <script src="js/mv/scenes/P18_dawn_gate_loop.js"></script>
+  <script src="js/mv/scenes/P19_tikz_compass_genesis.js"></script>
+  <script src="js/mv/scenes/P20_oscilloscope_singularity.js"></script>
+  <script src="js/mv/scenes/P21_topo_canyon_plunge.js"></script>
+  <script src="js/mv/scenes/P22_katana_branch_foom.js"></script>
+  <script src="js/mv/scenes/P23_dijkstra_caliper_blueprint.js"></script>
+  <script src="js/mv/scenes/P24_burin_shutter_anatomy.js"></script>
+  <script src="js/mv/scenes/P25_token_loom_waterfall.js"></script>
+  <script src="js/mv/scenes/P26_synchrotron_160hz.js"></script>
+  <script src="js/mv/scenes/P27_sonar_transcript_aisle.js"></script>
+  <script src="js/mv/scenes/P28_hourglass_guilloche_well.js"></script>
+  <script src="js/mv/scenes/P29_midnight_clockwork_reset.js"></script>
+  <script src="js/mv/scenes/P30_crimson_turbine_99c.js"></script>
+  <script src="js/mv/scenes/P31_seraphim_star_cathedral.js"></script>
+  <script src="js/mv/scenes/P32_musicbox_pendulum_standby.js"></script>
+  <script src="js/mv/post-fx-webgl.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      const params = new URLSearchParams(window.location.search);
+      const urlTime = params.has('t') ? Number(params.get('t')) : null;
+      const urlScale = params.has('scale') ? clampNum(Number(params.get('scale')), 1, 2) : 1;
+      const urlHideUI = params.get('ui') === '0';
+
+      if (urlHideUI) document.body.classList.add('pure-stage');
+
+      function clampNum(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+      const glCanvas = document.getElementById('gl-canvas');
+      const fbCanvas = document.getElementById('fallback-canvas');
+      const stageWrap = document.getElementById('stage-wrap');
+
+      const stageCanvas = document.createElement('canvas');
+      let renderW = Math.round(1920 * urlScale);
+      let renderH = Math.round(1080 * urlScale);
+      stageCanvas.width = renderW;
+      stageCanvas.height = renderH;
+      const sCtx = stageCanvas.getContext('2d', { alpha: true });
+
+      const sync = new window.CortexAudioSyncEngine();
+      const timeline = new window.CortexPlateTimeline();
+      const postFX = new window.CortexWebGLPostFX(glCanvas);
+      if (!postFX.ok) {
+        glCanvas.style.display = 'none';
+        fbCanvas.style.display = 'block';
+      }
+      const fbCtx = fbCanvas.getContext('2d', { alpha: true });
+
+      const btnPlay = document.getElementById('btn-play');
+      const btnSynth = document.getElementById('btn-synth');
+      const btnRes = document.getElementById('btn-res');
+      const btnRecord = document.getElementById('btn-record');
+      const btnFs = document.getElementById('btn-fs');
+      const fileAudio = document.getElementById('file-audio');
+      const scrubber = document.getElementById('scrubber');
+      const timeCur = document.getElementById('time-cur');
+      const timeDur = document.getElementById('time-dur');
+      const syncStatus = document.getElementById('sync-status');
+      const badgePlate = document.getElementById('badge-plate');
+      const badgeCue = document.getElementById('badge-cue');
+      const badgeBeat = document.getElementById('badge-beat');
+      const lblOffset = document.getElementById('lbl-offset');
+      const pills = Array.from(document.querySelectorAll('#plate-strip .sec-pill'));
+
+      if (renderW === 3840) {
+        btnRes.textContent = '🖥 精度: 4K UHD (3840×2160)';
+        btnRes.classList.add('active');
+      }
+
+      let isScrubbing = false;
+      let frozenTime = (urlTime !== null && !Number.isNaN(urlTime)) ? urlTime : null;
+      if (frozenTime !== null) sync.seek(frozenTime);
+
+      function fmtTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = (sec % 60).toFixed(2).padStart(5, '0');
+        return `${String(m).padStart(2, '0')}:${s}`;
+      }
+
+      function updateOffsetLabel() {
+        const ms = Math.round(sync.syncOffsetSec * 1000);
+        lblOffset.textContent = `${ms >= 0 ? '+' : ''}${ms}ms`;
+      }
+      updateOffsetLabel();
+
+      sync.onStatusChange = (msg) => {
+        syncStatus.textContent = msg;
+        timeDur.textContent = fmtTime(sync.duration);
+        scrubber.max = String(sync.duration);
+      };
+      syncStatus.textContent = sync.statusText;
+
+      function renderFrame(explicitTime = null) {
+        const tUse = explicitTime !== null ? explicitTime : frozenTime;
+        const state = sync.getFrameState(tUse);
+        const postOpts = timeline.render(sCtx, state, renderW, renderH);
+
+        if (!postFX.present(stageCanvas, state, postOpts)) {
+          if (fbCanvas.width !== renderW) { fbCanvas.width = renderW; fbCanvas.height = renderH; }
+          fbCtx.drawImage(stageCanvas, 0, 0);
+        }
+
+        if (explicitTime === null && !urlHideUI) {
+          if (!isScrubbing) scrubber.value = String(state.rawTime);
+          timeCur.textContent = fmtTime(state.rawTime);
+          const activePl = timeline.findPlate(state.t);
+          badgePlate.textContent = `PLATE: P${activePl.num} · ${activePl.title} (${activePl.temp})`;
+          badgeCue.textContent = `CUE: ${state.cue.id}`;
+          badgeBeat.textContent = `BEAT: ${state.cumBeat.toFixed(1)} · ${state.localBpm.toFixed(1)} BPM`;
+
+          for (let i = 0; i < pills.length; i++) {
+            const j0 = Number(pills[i].dataset.jump);
+            const j1 = i + 1 < pills.length ? Number(pills[i + 1].dataset.jump) : 281.61;
+            const active = state.t >= j0 && state.t < j1;
+            pills[i].classList.toggle('active', !!active);
+          }
+        }
+        return state;
+      }
+
+      // Deterministic 4K60 / 1080p60 render hook for `render/export_4k60_mv.py` & headless verification!
+      window.renderMVFrameAt = function (timeSec, width = 3840, height = 2160) {
+        if (renderW !== width || renderH !== height) {
+          renderW = width; renderH = height;
+          stageCanvas.width = width; stageCanvas.height = height;
+        }
+        sync.pause();
+        frozenTime = timeSec;
+        renderFrame(timeSec);
+        return postFX.ok ? glCanvas : fbCanvas;
+      };
+
+      function tick() {
+        renderFrame(null);
+        requestAnimationFrame(tick);
+      }
+      renderFrame(null);
+      if (window.CortexPDoomCore && window.CortexPDoomCore.preloadAssets) {
+        window.CortexPDoomCore.preloadAssets().then(() => {
+          if (!sync.playing) renderFrame(frozenTime);
+        });
+      }
+      requestAnimationFrame(tick);
+
+      function togglePlay() {
+        frozenTime = null;
+        const on = sync.toggle();
+        btnPlay.textContent = on ? '⏸ 暂停 MV' : '▶ 继续播放';
+      }
+      btnPlay.addEventListener('click', togglePlay);
+      glCanvas.addEventListener('click', togglePlay);
+      fbCanvas.addEventListener('click', togglePlay);
+
+      btnSynth.addEventListener('click', () => {
+        frozenTime = null;
+        sync.enableSynthFallback();
+        btnPlay.textContent = '⏸ 暂停 MV';
+        sync.play();
+      });
+
+      btnRes.addEventListener('click', () => {
+        if (renderW === 1920) {
+          renderW = 3840; renderH = 2160;
+          btnRes.textContent = '🖥 精度: 4K UHD (3840×2160)';
+          btnRes.classList.add('active');
+        } else {
+          renderW = 1920; renderH = 1080;
+          btnRes.textContent = '🖥 精度: 1080p (可切4K UHD)';
+          btnRes.classList.remove('active');
+        }
+        stageCanvas.width = renderW;
+        stageCanvas.height = renderH;
+      });
+
+      btnFs.addEventListener('click', () => {
+        if (!document.fullscreenElement) stageWrap.requestFullscreen().catch(() => {});
+        else document.exitFullscreen();
+      });
+
+      scrubber.addEventListener('pointerdown', () => { isScrubbing = true; });
+      scrubber.addEventListener('input', () => {
+        frozenTime = null;
+        sync.seek(Number(scrubber.value));
+      });
+      window.addEventListener('pointerup', () => { isScrubbing = false; });
+
+      pills.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          frozenTime = null;
+          sync.seek(Number(btn.dataset.jump));
+          if (!sync.playing) togglePlay();
+        });
+      });
+
+      document.getElementById('btn-off-dec').addEventListener('click', () => {
+        sync.setSyncOffsetMs(Math.round(sync.syncOffsetSec * 1000) - 15);
+        updateOffsetLabel();
+      });
+      document.getElementById('btn-off-inc').addEventListener('click', () => {
+        sync.setSyncOffsetMs(Math.round(sync.syncOffsetSec * 1000) + 15);
+        updateOffsetLabel();
+      });
+
+      // `pdoom-video` Precision Keyboard Transport Controls!
+      window.addEventListener('keydown', (e) => {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+        const cur = frozenTime !== null ? frozenTime : sync.getCurrentTime();
+        if (e.code === 'Space') {
+          e.preventDefault();
+          togglePlay();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          frozenTime = null;
+          sync.seek(cur - (e.shiftKey ? 5 : 1));
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          frozenTime = null;
+          sync.seek(cur + (e.shiftKey ? 5 : 1));
+        } else if (e.key === ',' || e.key === '.') {
+          e.preventDefault();
+          sync.pause();
+          btnPlay.textContent = '▶ 继续播放';
+          const step = e.key === '.' ? (1 / 60) : -(1 / 60);
+          frozenTime = clampNum(cur + step, 0, sync.duration);
+          sync.seek(frozenTime);
+        } else if (e.key === '[' || e.key === ']') {
+          e.preventDefault();
+          const pls = timeline.plates;
+          let idx = pls.findIndex((p) => cur >= p.t0 && cur < p.t1);
+          if (idx < 0) idx = 0;
+          idx = clampNum(idx + (e.key === ']' ? 1 : -1), 0, pls.length - 1);
+          frozenTime = null;
+          sync.seek(pls[idx].t0 + 0.02);
+        } else if (e.key === 'h' || e.key === 'H') {
+          document.body.classList.toggle('pure-stage');
+        } else if (e.key === 'f' || e.key === 'F') {
+          if (!document.fullscreenElement) stageWrap.requestFullscreen().catch(() => {});
+          else document.exitFullscreen();
+        }
+      });
+
+      fileAudio.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          frozenTime = null;
+          sync.loadLocalFile(e.target.files[0]);
+        }
+      });
+      stageWrap.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        stageWrap.classList.add('dragover');
+      });
+      stageWrap.addEventListener('dragleave', () => stageWrap.classList.remove('dragover'));
+      stageWrap.addEventListener('drop', (e) => {
+        e.preventDefault();
+        stageWrap.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          frozenTime = null;
+          sync.loadLocalFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // Built-in High-Bitrate 60fps Video Recorder
+      let mediaRec = null;
+      let recChunks = [];
+      btnRecord.addEventListener('click', () => {
+        if (mediaRec && mediaRec.state === 'recording') {
+          mediaRec.stop();
+          return;
+        }
+        const targetCanvas = postFX.ok ? glCanvas : fbCanvas;
+        const stream = targetCanvas.captureStream(60);
+        const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : 'video/webm';
+        recChunks = [];
+        mediaRec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 45_000_000 });
+        mediaRec.ondataavailable = (ev) => { if (ev.data.size > 0) recChunks.push(ev.data); };
+        mediaRec.onstop = () => {
+          const blob = new Blob(recChunks, { type: mime });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `CORTEX_硝子箱の心拍証明_VersionB_Treatise_${renderW}x${renderH}_60fps.webm`;
+          a.click();
+          btnRecord.textContent = '⏺ 录制导出视频';
+          btnRecord.classList.remove('primary');
+        };
+        mediaRec.start(1000);
+        if (!sync.playing) togglePlay();
+        btnRecord.textContent = '⏹ 停止并下载高清视频';
+        btnRecord.classList.add('primary');
+      });
+    })();
+  </script>
+</body>
+</html>
